@@ -1,0 +1,65 @@
+<div class="min-h-screen flex flex-col">
+  <app-header 
+    (navigateToHome)="showHome()" 
+    (navigateToPaths)="showLearningPaths()"
+    (navigateToLogin)="showLogin()"
+    (navigateToSignup)="showSignup()"
+    (navigateToAdminDashboard)="showAdminDashboard()"
+    (navigateToInstructorDashboard)="showInstructorDashboard()"
+  ></app-header>
+  
+  <main class="flex-grow">
+    @switch (currentPage()) {
+      @case ('home') {
+        <app-hero></app-hero>
+        <app-stats></app-stats>
+        <app-courses-section (courseSelected)="showCourseDetail($event)"></app-courses-section>
+      }
+      @case ('learning-paths') {
+        <app-learning-paths></app-learning-paths>
+      }
+       @case ('course-detail') {
+        @if (selectedCourse(); as course) {
+          <app-course-detail 
+            [course]="course" 
+            (navigateToCourse)="showCourseDetail($event)"
+            (navigateToInstructorProfile)="showInstructorProfile($event)"
+          ></app-course-detail>
+        }
+      }
+      @case ('admin-dashboard') {
+        <app-admin-dashboard></app-admin-dashboard>
+      }
+      @case ('instructor-dashboard') {
+        <app-instructor-dashboard></app-instructor-dashboard>
+      }
+      @case ('instructor-profile') {
+        @if(selectedInstructor(); as instructor) {
+          <app-instructor-profile [instructor]="instructor" (courseSelected)="showCourseDetail($event)"></app-instructor-profile>
+        }
+      }
+      @case ('privacy') {
+        <app-privacy-policy></app-privacy-policy>
+      }
+      @case ('terms') {
+        <app-terms-conditions></app-terms-conditions>
+      }
+      @case ('join') {
+        <app-join-instructor></app-join-instructor>
+      }
+      @case ('login') {
+        <app-login (authSuccess)="onAuthSuccess()" (navigateToSignup)="showSignup()"></app-login>
+      }
+      @case ('signup') {
+        <app-signup (authSuccess)="onAuthSuccess()" (navigateToLogin)="showLogin()"></app-signup>
+      }
+    }
+  </main>
+
+  <app-footer 
+    (navigateToHome)="showHome()" 
+    (navigateToPrivacy)="showPrivacy()" 
+    (navigateToTerms)="showTerms()"
+    (navigateToJoin)="showJoin()"
+  ></app-footer>
+</div>

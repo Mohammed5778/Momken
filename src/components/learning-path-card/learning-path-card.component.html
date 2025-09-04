@@ -1,0 +1,28 @@
+
+@if(path()) {
+  <div class="bg-white rounded-xl shadow-md border border-gray-200/80 overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-2 transform group">
+    
+    <!-- Top colored section -->
+    <div [class]="path().bgColor" class="p-6 text-center text-white h-80 flex flex-col items-center justify-between">
+      
+      <!-- Text content -->
+      <div>
+        <p class="text-lg font-semibold opacity-80">{{ path().subtitle }}</p>
+        <h3 class="text-3xl font-black mt-1 leading-tight">{{ path().title }}</h3>
+      </div>
+      
+      <!-- Image container -->
+      <div class="w-full h-40 mt-4 flex justify-center items-center">
+         <img [src]="path().image" [alt]="path().title" class="max-h-full max-w-full object-contain drop-shadow-lg transition-transform duration-300 group-hover:scale-110" />
+      </div>
+
+    </div>
+
+    <!-- Bottom white section -->
+    <div class="p-5 bg-white text-center">
+        <h4 class="text-lg font-bold text-gray-800">{{ path().title }}</h4>
+        <p class="text-sm text-gray-500 mt-1">{{ path().courseCount }} كورسات</p>
+    </div>
+
+  </div>
+}

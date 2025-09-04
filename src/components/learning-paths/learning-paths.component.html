@@ -1,0 +1,14 @@
+
+<section class="py-16 bg-gray-50/50">
+  <div class="container mx-auto px-4">
+    <h2 class="text-3xl font-black text-center text-[#2f3c7e] mb-12 animate-fade-in-up">جميع المسارات</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+       @for(path of learningPaths(); track path.title; let i = $index) {
+        <div class="animate-fade-in-up" [style.animation-delay]="(i * 100) + 'ms'">
+            <app-learning-path-card [path]="path"></app-learning-path-card>
+        </div>
+      }
+    </div>
+  </div>
+</section>

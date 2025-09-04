@@ -1,0 +1,103 @@
+
+<header class="bg-white/90 backdrop-blur-md shadow-md sticky top-0 z-50 border-b border-gray-200/80">
+  <div class="container mx-auto px-4">
+    <div class="flex justify-between items-center py-4">
+      <div class="flex items-center space-x-8 rtl:space-x-reverse">
+        <h1 class="text-3xl font-black text-[#00c896] tracking-wide cursor-pointer" (click)="navigateToHome.emit()">ممكن</h1>
+        <div class="relative hidden md:block">
+          <input 
+            type="text" 
+            placeholder="ابحث عن..." 
+            class="bg-gray-100 rounded-full py-2 pr-10 pl-4 w-64 border border-gray-200 focus:border-[#00c896] focus:ring-2 focus:ring-[#00c896]/50 transition-all duration-300"
+            (input)="onSearch($event)">
+          <svg class="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+        </div>
+      </div>
+      <div class="flex items-center space-x-4 rtl:space-x-reverse">
+        <nav class="hidden md:flex items-center space-x-6 rtl:space-x-reverse text-gray-600 font-semibold">
+          <a (click)="navigateToPaths.emit()" class="cursor-pointer hover:text-[#2f3c7e] transform hover:scale-105 transition-all duration-300">مسارات التعلم</a>
+          @if (currentUser(); as user) {
+            @if (user.isAdmin) {
+              <a (click)="navigateToAdminDashboard.emit()" class="cursor-pointer text-teal-600 hover:text-[#2f3c7e] transform hover:scale-105 transition-all duration-300">لوحة تحكم الأدمن</a>
+            }
+            @if (user.role === 'instructor') {
+               <a (click)="navigateToInstructorDashboard.emit()" class="cursor-pointer text-[#00c896] hover:text-[#2f3c7e] transform hover:scale-105 transition-all duration-300">لوحة تحكم المحاضر</a>
+            }
+          }
+          @if (!currentUser()) {
+            <a (click)="navigateToLogin.emit()" class="cursor-pointer hover:text-[#2f3c7e] transform hover:scale-105 transition-all duration-300">تسجيل دخول</a>
+          }
+        </nav>
+        
+        @if (currentUser(); as user) {
+          <div class="flex items-center space-x-4 rtl:space-x-reverse">
+            <!-- Notifications Bell -->
+             <div class="relative">
+              <button (click)="toggleNotifications()" class="text-gray-500 hover:text-teal-600 transition-colors">
+                <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
+                 @if(unreadCount() > 0) {
+                  <span class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                    {{ unreadCount() }}
+                  </span>
+                 }
+              </button>
+              @if(isNotificationsOpen()) {
+                <div class="absolute top-full right-0 mt-3 w-80 bg-white rounded-lg shadow-xl border border-gray-200/80 overflow-hidden animate-fade-in z-50">
+                  <div class="p-3 bg-gray-50 border-b">
+                    <h4 class="font-bold text-gray-700">الإشعارات</h4>
+                  </div>
+                  <div class="max-h-96 overflow-y-auto">
+                    @if (notifications().length > 0) {
+                      <ul>
+                        @for (notif of notifications(); track notif.id) {
+                          <li class="border-b p-3 hover:bg-gray-50/80">
+                            <p class="text-sm text-gray-700">{{ notif.message }}</p>
+                            <p class="text-xs text-gray-400 mt-1">{{ notif.created_at | date:'short' }}</p>
+                          </li>
+                        }
+                      </ul>
+                    } @else {
+                      <p class="text-center text-gray-500 py-8">لا توجد إشعارات جديدة.</p>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+            <div class="flex items-center space-x-2 rtl:space-x-reverse">
+               @if (user.photoURL) {
+                <img [src]="user.photoURL" alt="صورة الملف الشخصي" class="w-10 h-10 rounded-full object-cover border-2 border-teal-200">
+              } @else {
+                <span class="inline-flex items-center justify-center h-10 w-10 rounded-full bg-gray-200 text-gray-500">
+                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </span>
+              }
+              <span class="font-semibold text-gray-700 hidden sm:inline">مرحباً، {{ user.displayName?.split(' ')[0] }}</span>
+            </div>
+            <button (click)="logout()" class="bg-red-500 text-white font-bold py-2 px-4 rounded-full hover:bg-red-600 transform hover:scale-105 transition-all duration-300 text-sm">
+              خروج
+            </button>
+          </div>
+        } @else {
+          <button (click)="navigateToSignup.emit()" class="bg-[#2f3c7e] text-white font-bold py-2 px-6 rounded-full hover:bg-opacity-90 transform hover:scale-105 transition-all duration-300">
+            إنشاء حساب
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+  <div class="bg-[#2f3c7e] text-white text-center py-2 relative">
+    <p>
+      <span class="font-bold">عرض خاص!</span> خصم 70% على الاشتراك السنوي بكود 
+      <button (click)="copyPromoCode('SAVE70')" class="bg-red-500 text-white font-bold py-1 px-3 rounded-full text-sm mx-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#2f3c7e] focus:ring-white transition-transform transform active:scale-95">SAVE70</button>
+      @if(codeCopied()) {
+        <span class="absolute right-4 top-1/2 -translate-y-1/2 bg-teal-500 text-white text-xs font-bold px-2 py-1 rounded-md animate-fade-in">
+          تم النسخ!
+        </span>
+      }
+    </p>
+  </div>
+</header>

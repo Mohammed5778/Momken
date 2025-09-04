@@ -1,0 +1,170 @@
+@if(course(); as c) {
+<div class="animate-fade-in-up">
+  <!-- Hero Section -->
+  <header class="bg-[#2f3c7e] text-white py-12 md:py-16">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-5 gap-8 lg:gap-12 items-center">
+        <!-- Left: Text content -->
+        <div class="md:col-span-3 rtl:text-right">
+          <p class="text-teal-300 font-semibold tracking-wide">{{ c.category }}</p>
+          <h1 class="text-4xl md:text-5xl font-black mt-2 leading-tight">{{ c.title }}</h1>
+          <p class="mt-4 text-lg text-gray-300 max-w-2xl">{{ c.description }}</p>
+          <div 
+            (click)="onInstructorClicked(c.instructor)" 
+            [class.cursor-pointer]="c.instructor"
+            class="flex items-center mt-6 group/instructor">
+            <img [src]="c.instructorImage" [alt]="c.instructorName" class="w-12 h-12 rounded-full object-cover border-2 border-teal-400 group-hover/instructor:border-white transition-colors">
+            <div class="mr-4 rtl:ml-4 rtl:mr-0">
+              <p class="font-bold text-lg group-hover/instructor:text-teal-300 transition-colors">{{ c.instructorName }}</p>
+              <p class="text-sm text-gray-400">خبير في مجال {{ c.category }}</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-6 text-sm">
+            <div class="flex items-center text-amber-400">
+              <span class="font-bold text-xl mr-1 rtl:ml-1 rtl:mr-0">{{ c.rating | number:'1.1-1' }}</span>
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              <span class="text-gray-400 mr-2 rtl:ml-2 rtl:mr-0">({{ c.reviewsCount }} تقييم)</span>
+            </div>
+            <div class="flex items-center text-gray-300"><svg class="w-5 h-5 mr-2 rtl:ml-2 rtl:mr-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>المستوى: {{ c.level }}</div>
+            <div class="flex items-center text-gray-300"><svg class="w-5 h-5 mr-2 rtl:ml-2 rtl:mr-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.658-.463 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007Z" /></svg>{{ c.lessons?.length || c.lessonsCount || 0 }} درس</div>
+          </div>
+        </div>
+        <!-- Right: Image/Video Preview Card -->
+        <div class="md:col-span-2 mt-8 md:mt-0">
+          <div (click)="playVideo()" class="bg-black rounded-xl shadow-2xl overflow-hidden group relative aspect-video cursor-pointer">
+              <img [src]="c.courseImage" [alt]="c.title" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+              <div class="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition-colors duration-300 flex items-center justify-center">
+                  <div class="text-white text-center">
+                      <div class="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/50 group-hover:scale-110 transition-transform duration-300">
+                           <svg class="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"></path></svg>
+                      </div>
+                      <p class="mt-3 font-bold">شاهد الفيديو التقديمي</p>
+                  </div>
+              </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="bg-gray-50/50 py-16">
+    <div class="container mx-auto px-4">
+      <div class="lg:grid lg:grid-cols-3 lg:gap-12">
+        <!-- Left side content -->
+        <div class="lg:col-span-2 space-y-8">
+           <div class="p-8 bg-white rounded-xl shadow-lg border border-gray-200/80">
+             <h3 class="text-2xl font-bold text-[#2f3c7e] mb-6">ماذا ستتعلم في هذا الكورس؟</h3>
+             <ul class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+               @for (point of c.whatYouWillLearn; track point) {
+                 <li class="flex items-start">
+                   <svg class="w-6 h-6 text-teal-500 mr-3 rtl:ml-3 rtl:mr-0 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                   <span class="text-gray-800">{{ point }}</span>
+                 </li>
+               }
+             </ul>
+           </div>
+           
+           <!-- Course Content / Lessons -->
+           <div class="p-8 bg-white rounded-xl shadow-lg border border-gray-200/80">
+              <h3 class="text-2xl font-bold text-[#2f3c7e] mb-6">محتوى الدورة</h3>
+              @if (c.lessons && c.lessons.length > 0) {
+                <ul class="space-y-3">
+                  @for(lesson of c.lessons; track lesson.title) {
+                    <li class="flex items-center justify-between p-4 rounded-lg transition-colors" [class]="lesson.isFree ? 'bg-teal-50/50 hover:bg-teal-100/70' : 'bg-gray-100'">
+                       <div class="flex items-center">
+                          @if(lesson.isFree) {
+                            <button (click)="playVideo(lesson.videoUrl)" class="text-teal-500 hover:text-teal-700 ml-4 rtl:mr-4 rtl:ml-0 p-2 rounded-full bg-white shadow-sm">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 0 1 0 1.971l-11.54 6.347a1.125 1.125 0 0 1-1.667-.985V5.653Z" /></svg>
+                            </button>
+                          } @else {
+                             <div class="text-gray-400 ml-4 rtl:mr-4 rtl:ml-0 p-2 rounded-full bg-white shadow-sm">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
+                            </div>
+                          }
+                          <div>
+                              <h4 class="font-bold text-gray-800">{{ lesson.title }}</h4>
+                              @if(lesson.isFree) {
+                                <span class="text-xs font-semibold text-teal-600 bg-teal-100 px-2 py-0.5 rounded-full">معاينة مجانية</span>
+                              }
+                          </div>
+                       </div>
+                       <span class="text-sm font-semibold text-gray-500">{{ lesson.duration }}</span>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                 <div class="text-center py-8">
+                    <svg class="w-12 h-12 mx-auto text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m15.75 15.75-2.489-2.489m0 0a3.375 3.375 0 1 0-4.773-4.773 3.375 3.375 0 0 0 4.774 4.774ZM21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                    <p class="mt-4 font-semibold text-gray-600">لم يتم رفع دروس بعد</p>
+                </div>
+              }
+           </div>
+        </div>
+        
+        <!-- Right side sidebar -->
+        <div class="lg:col-span-1 mt-8 lg:mt-0">
+          <div class="sticky top-28 bg-white rounded-xl shadow-lg border border-gray-200/80 p-6 text-center">
+            <h3 class="text-2xl font-bold text-[#2f3c7e]">
+              ابدأ رحلتك التعليمية الآن!
+            </h3>
+            <p class="mt-2 text-gray-500">احصل على وصول كامل لهذه الدورة وكل الدورات باشتراك واحد.</p>
+             <button class="w-full mt-6 bg-amber-400 text-slate-900 font-bold py-4 px-10 rounded-lg text-lg hover:bg-amber-500 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-amber-400/30">
+              اشترك الآن
+            </button>
+             <div class="text-sm text-gray-400 mt-4">ضمان استرداد الأموال لمدة 30 يومًا</div>
+              <ul class="mt-6 space-y-3 text-gray-700 text-right">
+                <li class="flex items-center text-sm font-semibold"><svg class="w-5 h-5 ml-2 rtl:mr-2 rtl:ml-0 text-teal-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>وصول مدى الحياة للدورة</li>
+                @if (c.hasCertificate) {
+                  <li class="flex items-center text-sm font-semibold"><svg class="w-5 h-5 ml-2 rtl:mr-2 rtl:ml-0 text-teal-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 0 0-.491 6.347A48.627 48.627 0 0 1 12 20.904a48.627 48.627 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.57 50.57 0 0 0-2.658-.813A59.905 59.905 0 0 1 12 3.493a59.902 59.902 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0l-.07.002z" /></svg>شهادة إتمام معتمدة</li>
+                }
+              </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Related Courses -->
+  @if(relatedCourses().length > 0) {
+      <div class="bg-white py-16">
+          <div class="container mx-auto px-4">
+             <h2 class="text-3xl font-black text-center text-[#2f3c7e] mb-8">دورات قد تهمك</h2>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                @for(relatedCourse of relatedCourses(); track relatedCourse.id) {
+                  <app-course-card [course]="relatedCourse" (courseClicked)="onRelatedCourseClicked($event)"></app-course-card>
+                }
+              </div>
+          </div>
+      </div>
+    }
+</div>
+
+<!-- Video Player Modal -->
+@if (isVideoPlayerVisible()) {
+  <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center animate-fade-in" (click)="closePlayer()">
+    <div class="relative w-full max-w-4xl bg-[#1e293b] rounded-xl shadow-2xl overflow-hidden animate-scale-in" (click)="$event.stopPropagation()">
+      <div class="p-3 bg-[#0f172a]/80 flex items-center justify-between">
+        <h3 class="text-white font-bold text-lg truncate pl-10">{{ c.title }}</h3>
+        <button (click)="closePlayer()" class="text-gray-400 hover:text-white transition-colors">
+          <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+      <div class="aspect-video relative">
+        <video 
+            class="w-full h-full object-contain" 
+            [src]="activeVideoUrl()" 
+            autoplay 
+            controls>
+            متصفحك لا يدعم عرض الفيديوهات.
+        </video>
+        <!-- Watermark -->
+        <div class="absolute top-4 right-4 text-white font-black text-xl flex items-center bg-black/30 backdrop-blur-sm px-3 py-1 rounded-lg pointer-events-none watermark-pulse">
+            <svg class="w-6 h-6 mr-2 text-[#00c896]" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 0 1 0 1.971l-11.54 6.347a1.125 1.125 0 0 1-1.667-.985V5.653Z" /></svg>
+            <span>ممكن</span>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+}

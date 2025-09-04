@@ -1,0 +1,331 @@
+<div class="bg-gray-50/50 py-16 animate-fade-in-up">
+  @if(currentUser(); as user) {
+  <div class="container mx-auto px-4">
+    <div class="max-w-7xl mx-auto bg-white p-8 md:p-12 rounded-2xl shadow-xl border border-gray-100">
+      
+      <div class="text-center mb-10">
+        <h2 class="text-4xl font-black text-[#2f3c7e]">لوحة تحكم الأدمن</h2>
+        <p class="mt-3 text-lg text-gray-500">إدارة الدورات، المحاضرين، وطلبات الانضمام.</p>
+      </div>
+
+      <!-- Tabs Navigation -->
+      <div class="mb-8 border-b border-gray-200">
+        <nav class="flex -mb-px space-x-6 rtl:space-x-reverse" aria-label="Tabs">
+          <button (click)="currentPage.set('courses')" 
+                  [class]="currentPage() === 'courses' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                  class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg transition-colors">
+            إدارة الدورات
+          </button>
+          <button (click)="currentPage.set('applications')" 
+                  [class]="currentPage() === 'applications' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                  class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg transition-colors relative">
+            مراجعة الطلبات
+            @if(pendingApplicationsCount() > 0) {
+               <span class="ml-2 rtl:mr-2 absolute -top-0 -right-4 bg-amber-400 text-amber-900 text-xs font-bold px-2 py-0.5 rounded-full">{{ pendingApplicationsCount() }}</span>
+            }
+          </button>
+          <button (click)="currentPage.set('instructors')" 
+                  [class]="currentPage() === 'instructors' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                  class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg transition-colors">
+            إدارة المحاضرين
+          </button>
+        </nav>
+      </div>
+
+      <!-- Content Area -->
+      @switch (currentPage()) {
+        @case ('courses') {
+          <!-- Course Creation Form -->
+          <form (submit)="submitCourse($event)" class="space-y-10">
+            <!-- Form content from previous version... -->
+              <!-- Section: Basic Info -->
+          <fieldset class="space-y-6">
+            <legend class="text-xl font-bold text-[#2f3c7e] border-b-2 border-[#00c896] pb-2 mb-6 w-full">
+              المعلومات الأساسية
+            </legend>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <div>
+                <label for="title" class="block text-sm font-bold text-gray-700 mb-2">عنوان الدورة *</label>
+                <input type="text" name="title" id="title" required class="w-full px-4 py-3 bg-gray-100 rounded-lg border-transparent focus:border-teal-500 focus:ring focus:ring-teal-500 focus:ring-opacity-50 transition duration-200 text-gray-800">
+              </div>
+              <div>
+                <label for="instructorName" class="block text-sm font-bold text-gray-700 mb-2">اسم المحاضر *</label>
+                <input type="text" name="instructorName" id="instructorName" required [value]="user.displayName" readonly class="w-full px-4 py-3 bg-gray-200/70 rounded-lg border-transparent text-gray-500 cursor-not-allowed">
+              </div>
+            </div>
+          </fieldset>
+            <!-- ... all other fieldsets ... -->
+             <!-- Section: Course Details -->
+          <fieldset class="space-y-6">
+            <legend class="text-xl font-bold text-[#2f3c7e] border-b-2 border-[#00c896] pb-2 mb-6 w-full">
+              تفاصيل الدورة
+            </legend>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6 items-end">
+              <div>
+                <label for="category" class="block text-sm font-bold text-gray-700 mb-2">القسم *</label>
+                <select name="category" id="category" required class="w-full px-4 py-3 bg-gray-100 rounded-lg border-transparent focus:border-teal-500 focus:ring focus:ring-teal-500 focus:ring-opacity-50 transition duration-200 text-gray-800 appearance-none">
+                  @for (category of categories(); track category) {
+                    <option [value]="category">{{ category }}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label for="level" class="block text-sm font-bold text-gray-700 mb-2">المستوى *</label>
+                <select name="level" id="level" required class="w-full px-4 py-3 bg-gray-100 rounded-lg border-transparent focus:border-teal-500 focus:ring focus:ring-teal-500 focus:ring-opacity-50 transition duration-200 text-gray-800 appearance-none">
+                  @for (level of levels(); track level) {
+                    <option [value]="level">{{ level }}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label for="duration" class="block text-sm font-bold text-gray-700 mb-2">المدة الإجمالية</label>
+                <input type="text" name="duration" id="duration" placeholder="مثال: 5 ساعات و 30 د" class="w-full px-4 py-3 bg-gray-100 rounded-lg border-transparent focus:border-teal-500 focus:ring focus:ring-teal-500 focus:ring-opacity-50 transition duration-200 text-gray-800">
+              </div>
+               <div class="md:col-span-3">
+                <label for="hasCertificate" class="flex items-center cursor-pointer select-none mt-4">
+                  <span class="text-sm font-bold text-gray-700">تمنح شهادة معتمدة:</span>
+                  <div class="relative inline-block w-12 mr-2 align-middle transition duration-200 ease-in rtl:mr-0 rtl:ml-2">
+                    <input type="checkbox" name="hasCertificate" id="hasCertificate" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                    <label for="hasCertificate" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                  </div>
+                </label>
+                <style>
+                  .toggle-checkbox:checked { right: 1.5rem; border-color: #00c896; }
+                  .toggle-checkbox:checked + .toggle-label { background-color: #00c896; }
+                </style>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- Section: Media Uploads -->
+          <fieldset class="space-y-6">
+            <legend class="text-xl font-bold text-[#2f3c7e] border-b-2 border-[#00c896] pb-2 mb-6 w-full">
+              ملفات الوسائط الرئيسية
+            </legend>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
+              <div>
+                <label for="courseImage" class="block text-sm font-bold text-gray-700 mb-2">صورة الدورة *</label>
+                <input type="file" name="courseImage" id="courseImage" required accept="image/*" (change)="handleFileChange($event, 'courseImage')" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 cursor-pointer">
+              </div>
+              <div>
+                <label for="instructorImage" class="block text-sm font-bold text-gray-700 mb-2">صورة المحاضر *</label>
+                <input type="file" name="instructorImage" id="instructorImage" accept="image/*" (change)="handleFileChange($event, 'instructorImage')" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 cursor-pointer">
+                 <p class="text-xs text-gray-500 mt-1">إذا ترك فارغاً، ستستخدم صورة ملفك الشخصي.</p>
+              </div>
+              <div>
+                <label for="videoUrl" class="block text-sm font-bold text-gray-700 mb-2">فيديو تقديمي (اختياري)</label>
+                <input type="file" name="videoUrl" id="videoUrl" accept="video/*" (change)="handleFileChange($event, 'videoUrl')" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 cursor-pointer">
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- Section: Descriptions -->
+          <fieldset class="space-y-6">
+             <legend class="text-xl font-bold text-[#2f3c7e] border-b-2 border-[#00c896] pb-2 mb-6 w-full">
+              الوصف والنقاط الرئيسية
+            </legend>
+            <div>
+              <label for="description" class="block text-sm font-bold text-gray-700 mb-2">وصف قصير للدورة</label>
+              <textarea name="description" id="description" rows="3" class="w-full px-4 py-3 bg-gray-100 rounded-lg border-transparent focus:border-teal-500 focus:ring focus:ring-teal-500 focus:ring-opacity-50 transition duration-200 text-gray-800"></textarea>
+            </div>
+            <div>
+              <label for="whatYouWillLearn" class="block text-sm font-bold text-gray-700 mb-2">ماذا سيتعلم الطالب؟ (كل نقطة في سطر)</label>
+              <textarea name="whatYouWillLearn" id="whatYouWillLearn" rows="5" class="w-full px-4 py-3 bg-gray-100 rounded-lg border-transparent focus:border-teal-500 focus:ring focus:ring-teal-500 focus:ring-opacity-50 transition duration-200 text-gray-800"></textarea>
+            </div>
+          </fieldset>
+
+          <!-- Section: Course Content -->
+          <fieldset>
+            <legend class="text-xl font-bold text-[#2f3c7e] border-b-2 border-[#00c896] pb-2 mb-4 w-full">
+              محتوى الدورة (الدروس)
+            </legend>
+            <div class="space-y-6">
+              @for (lesson of lessons(); track lesson.id; let i = $index) {
+                <div class="p-4 border rounded-lg bg-gray-50/80 relative">
+                  <p class="font-bold text-gray-600 mb-4">الدرس {{ i + 1 }}</p>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                    <div>
+                      <label [for]="'lesson_title_' + lesson.id" class="block text-xs font-bold text-gray-600 mb-1">عنوان الدرس *</label>
+                      <input type="text" [name]="'lesson_title_' + lesson.id" [id]="'lesson_title_' + lesson.id" class="w-full px-3 py-2 bg-white rounded-md border-gray-300 focus:border-teal-500 focus:ring-teal-500 text-sm">
+                    </div>
+                     <div>
+                      <label [for]="'lesson_duration_' + lesson.id" class="block text-xs font-bold text-gray-600 mb-1">مدة الدرس</label>
+                      <input type="text" [name]="'lesson_duration_' + lesson.id" [id]="'lesson_duration_' + lesson.id" placeholder="مثال: 15 دقيقة" class="w-full px-3 py-2 bg-white rounded-md border-gray-300 focus:border-teal-500 focus:ring-teal-500 text-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                      <label [for]="'lesson_video_' + lesson.id" class="block text-xs font-bold text-gray-600 mb-1">ملف فيديو الدرس *</label>
+                      <input type="file" [name]="'lesson_video_' + lesson.id" [id]="'lesson_video_' + lesson.id" accept="video/*" (change)="handleLessonFileChange($event, lesson.id)" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 cursor-pointer">
+                    </div>
+                    <div>
+                      <label [for]="'lesson_isFree_' + lesson.id" class="flex items-center cursor-pointer select-none">
+                        <input type="checkbox" [name]="'lesson_isFree_' + lesson.id" [id]="'lesson_isFree_' + lesson.id" class="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500">
+                        <span class="ml-2 rtl:mr-2 text-sm font-medium text-gray-700">درس تجريبي مجاني</span>
+                      </label>
+                    </div>
+                  </div>
+                  @if (lessons().length > 1) {
+                    <button type="button" (click)="removeLesson(lesson.id)" class="absolute top-3 left-3 rtl:right-auto rtl:left-3 text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full bg-gray-100 hover:bg-red-100">
+                      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+             <button type="button" (click)="addLesson()" class="mt-4 bg-teal-50 text-teal-700 font-bold py-2 px-4 rounded-lg hover:bg-teal-100 transition-colors flex items-center">
+              <svg class="w-5 h-5 ml-2 rtl:mr-2 rtl:ml-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+              إضافة درس آخر
+            </button>
+          </fieldset>
+          
+            <!-- Submission -->
+            <div class="pt-6 border-t mt-10">
+              <button type="submit" [disabled]="status() === 'submitting'" class="w-full bg-[#00c896] text-white font-bold py-4 px-10 rounded-lg text-lg hover:scale-105 transform transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-[#00c896]/30 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center">
+                @if (status() === 'submitting') {
+                  <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>جاري إضافة الدورة...</span>
+                } @else {
+                  <span>إضافة الدورة</span>
+                }
+              </button>
+            </div>
+          </form>
+        }
+        @case ('applications') {
+          <div class="space-y-4">
+             @if (applications().length === 0) {
+              <p class="text-center text-gray-500 py-10">لا توجد طلبات للمراجعة حالياً.</p>
+             }
+             @for (app of applications(); track app.id) {
+               <div class="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
+                 <div class="flex items-center">
+                   <img [src]="app.user.avatar_url" class="w-12 h-12 rounded-full object-cover">
+                   <div class="mr-4 rtl:ml-4 rtl:mr-0">
+                     <h4 class="font-bold text-gray-800">{{ app.user.full_name }}</h4>
+                     <p class="text-sm text-gray-500">{{ app.expertise_field }} - {{ app.created_at | date:'medium' }}</p>
+                   </div>
+                 </div>
+                 <div class="flex items-center space-x-2 rtl:space-x-reverse">
+                    @switch (app.status) {
+                        @case ('pending') { <span class="px-3 py-1 text-xs font-bold text-amber-800 bg-amber-200 rounded-full">قيد المراجعة</span> }
+                        @case ('approved') { <span class="px-3 py-1 text-xs font-bold text-green-800 bg-green-200 rounded-full">تمت الموافقة</span> }
+                        @case ('rejected') { <span class="px-3 py-1 text-xs font-bold text-red-800 bg-red-200 rounded-full">تم الرفض</span> }
+                    }
+                   <button (click)="selectedApplication.set(app)" class="bg-white hover:bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded-lg border border-gray-300">
+                     مراجعة
+                   </button>
+                 </div>
+               </div>
+             }
+          </div>
+        }
+        @case ('instructors') {
+           <div class="space-y-4">
+             @if (instructors().length === 0) {
+              <p class="text-center text-gray-500 py-10">لا يوجد محاضرون حالياً.</p>
+             }
+             @for (inst of instructors(); track inst.uid) {
+               <div class="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
+                 <div class="flex items-center">
+                   <img [src]="inst.photoURL" class="w-12 h-12 rounded-full object-cover">
+                   <div class="mr-4 rtl:ml-4 rtl:mr-0">
+                     <h4 class="font-bold text-gray-800">{{ inst.displayName }}</h4>
+                     <p class="text-sm text-gray-500">{{ inst.title || 'محاضر' }}</p>
+                   </div>
+                 </div>
+                 <div class="flex items-center space-x-2 rtl:space-x-reverse">
+                   <button (click)="openNotificationModal(inst)" class="bg-sky-100 hover:bg-sky-200 text-sky-700 font-bold py-2 px-4 rounded-lg">إرسال ملاحظة</button>
+                   <button (click)="suspendInstructor(inst)" class="bg-red-100 hover:bg-red-200 text-red-700 font-bold py-2 px-4 rounded-lg">حظر</button>
+                 </div>
+               </div>
+             }
+          </div>
+        }
+      }
+      
+      @if(status() === 'error') {
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center mt-6">
+          <p>{{ errorMessage() }}</p>
+        </div>
+      }
+      @if(status() === 'success') {
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg text-center mt-6">
+          <p>{{ successMessage() }}</p>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Application Review Modal -->
+  @if(selectedApplication(); as app) {
+    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in" (click)="selectedApplication.set(null)">
+      <div class="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col animate-scale-in" (click)="$event.stopPropagation()">
+        <header class="p-4 border-b flex justify-between items-center">
+          <h3 class="text-2xl font-bold text-[#2f3c7e]">مراجعة طلب: {{ app.user.full_name }}</h3>
+          <button (click)="selectedApplication.set(null)" class="text-gray-400 hover:text-gray-700">&times;</button>
+        </header>
+        <main class="p-6 overflow-y-auto space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div><h4 class="font-bold">المجال:</h4><p>{{ app.expertise_field }}</p></div>
+            <div><h4 class="font-bold">الحالة:</h4><p>{{ app.status }}</p></div>
+            <div><h4 class="font-bold">نبذة:</h4><p class="text-gray-700">{{ app.bio }}</p></div>
+            <div><h4 class="font-bold">روابط:</h4>
+              <a [href]="app.cv_url" target="_blank" class="text-teal-600 hover:underline">السيرة الذاتية</a> |
+              <a [href]="app.linkedin_url" target="_blank" class="text-teal-600 hover:underline">لينكدإن</a>
+            </div>
+          </div>
+          <div>
+            <h4 class="text-xl font-bold mb-3">إجابات الفيديو</h4>
+            <div class="space-y-4">
+              @for(answer of app.video_answers; track answer.url) {
+                <div>
+                  <p class="font-semibold text-gray-800">{{ answer.question }}</p>
+                  <video [src]="answer.url" controls class="w-full mt-2 rounded-lg bg-black"></video>
+                </div>
+              }
+            </div>
+          </div>
+        </main>
+        @if(app.status === 'pending') {
+          <footer class="p-4 bg-gray-50 border-t flex justify-end space-x-3 rtl:space-x-reverse">
+            <button (click)="handleApplication(app.id, app.user.id, 'rejected')" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg">رفض</button>
+            <button (click)="handleApplication(app.id, app.user.id, 'approved')" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg">موافقة وترقية</button>
+          </footer>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Notification Modal -->
+  @if(showNotificationModal() && notificationTarget(); as target) {
+     <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in" (click)="showNotificationModal.set(false)">
+       <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl animate-scale-in" (click)="$event.stopPropagation()">
+         <form (submit)="sendNotification($event)">
+           <header class="p-4 border-b"><h3 class="text-2xl font-bold text-[#2f3c7e]">إرسال ملاحظة إلى {{ target.displayName }}</h3></header>
+           <main class="p-6 space-y-4">
+             <div>
+               <label for="message" class="block font-bold mb-1">الرسالة</label>
+               <textarea name="message" id="message" rows="4" required class="w-full p-2 border rounded-md"></textarea>
+             </div>
+             <div>
+               <label for="courseId" class="block font-bold mb-1">ربط بدورة (اختياري)</label>
+               <select name="courseId" id="courseId" class="w-full p-2 border rounded-md">
+                 <option value="">-- لا يوجد --</option>
+                 @for(course of coursesForNotificationTarget(); track course.id) {
+                    <option [value]="course.id">{{ course.title }}</option>
+                 }
+               </select>
+             </div>
+           </main>
+           <footer class="p-4 bg-gray-50 border-t flex justify-end space-x-3 rtl:space-x-reverse">
+             <button type="button" (click)="showNotificationModal.set(false)" class="bg-gray-200 text-gray-800 font-bold py-2 px-6 rounded-lg">إلغاء</button>
+             <button type="submit" class="bg-teal-600 text-white font-bold py-2 px-6 rounded-lg">إرسال</button>
+           </footer>
+         </form>
+       </div>
+     </div>
+  }
+  }
+</div>
