@@ -1,4 +1,3 @@
-
 import { Injectable, signal } from '@angular/core';
 import { supabaseClient } from '../supabase.client';
 import { User } from '@supabase/supabase-js';
@@ -116,7 +115,11 @@ export class AuthService {
   }
 
   async logout(): Promise<void> {
-    await supabaseClient.auth.signOut();
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) {
+      console.error('Error logging out:', error);
+      throw new Error('فشل تسجيل الخروج. يرجى المحاولة مرة أخرى.');
+    }
   }
 
   private getArabicErrorMessage(errorMessage: string): string {

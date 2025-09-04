@@ -1,33 +1,38 @@
-
 <header class="bg-white/90 backdrop-blur-md shadow-md sticky top-0 z-50 border-b border-gray-200/80">
-  <div class="container mx-auto px-4">
-    <div class="flex justify-between items-center py-4">
-      <div class="flex items-center space-x-8 rtl:space-x-reverse">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="grid grid-cols-[auto_1fr_auto] items-center gap-x-4 md:gap-x-8 py-4">
+      
+      <!-- Col 1: Logo -->
+      <div class="flex-shrink-0">
         <h1 class="text-3xl font-black text-[#00c896] tracking-wide cursor-pointer" (click)="navigateToHome.emit()">ممكن</h1>
-        <div class="relative hidden md:block">
-          <input 
-            type="text" 
-            placeholder="ابحث عن..." 
-            class="bg-gray-100 rounded-full py-2 pr-10 pl-4 w-64 border border-gray-200 focus:border-[#00c896] focus:ring-2 focus:ring-[#00c896]/50 transition-all duration-300"
-            (input)="onSearch($event)">
-          <svg class="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-          </svg>
-        </div>
       </div>
-      <div class="flex items-center space-x-4 rtl:space-x-reverse">
+      
+      <!-- Col 2: Search Bar -->
+      <div class="relative hidden md:block w-full max-w-lg mx-auto">
+        <input 
+          type="text" 
+          placeholder="ابحث عن..." 
+          class="bg-gray-100 rounded-full py-2 pr-10 pl-4 w-full border border-gray-200 focus:border-[#00c896] focus:ring-2 focus:ring-[#00c896]/50 transition-all duration-300"
+          (input)="onSearch($event)">
+        <svg class="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+        </svg>
+      </div>
+      
+      <!-- Col 3: Nav & User Actions -->
+      <div class="flex items-center justify-end space-x-4 rtl:space-x-reverse">
         <nav class="hidden md:flex items-center space-x-6 rtl:space-x-reverse text-gray-600 font-semibold">
           <a (click)="navigateToPaths.emit()" class="cursor-pointer hover:text-[#2f3c7e] transform hover:scale-105 transition-all duration-300">مسارات التعلم</a>
           @if (currentUser(); as user) {
+            @if (user.role === 'user') {
+               <a (click)="navigateToJoin.emit()" class="cursor-pointer hover:text-[#2f3c7e] transform hover:scale-105 transition-all duration-300">انضم كمحاضر</a>
+            }
             @if (user.isAdmin) {
               <a (click)="navigateToAdminDashboard.emit()" class="cursor-pointer text-teal-600 hover:text-[#2f3c7e] transform hover:scale-105 transition-all duration-300">لوحة تحكم الأدمن</a>
             }
             @if (user.role === 'instructor') {
                <a (click)="navigateToInstructorDashboard.emit()" class="cursor-pointer text-[#00c896] hover:text-[#2f3c7e] transform hover:scale-105 transition-all duration-300">لوحة تحكم المحاضر</a>
             }
-          }
-          @if (!currentUser()) {
-            <a (click)="navigateToLogin.emit()" class="cursor-pointer hover:text-[#2f3c7e] transform hover:scale-105 transition-all duration-300">تسجيل دخول</a>
           }
         </nav>
         
@@ -82,22 +87,27 @@
             </button>
           </div>
         } @else {
-          <button (click)="navigateToSignup.emit()" class="bg-[#2f3c7e] text-white font-bold py-2 px-6 rounded-full hover:bg-opacity-90 transform hover:scale-105 transition-all duration-300">
-            إنشاء حساب
-          </button>
+          <div class="flex items-center space-x-2 rtl:space-x-reverse">
+            <a (click)="navigateToLogin.emit()" class="cursor-pointer text-gray-600 font-semibold hover:text-[#2f3c7e] transform hover:scale-105 transition-all duration-300">تسجيل دخول</a>
+            <button (click)="navigateToSignup.emit()" class="bg-[#2f3c7e] text-white font-bold py-2 px-6 rounded-full hover:bg-opacity-90 transform hover:scale-105 transition-all duration-300">
+              إنشاء حساب
+            </button>
+          </div>
         }
       </div>
     </div>
   </div>
   <div class="bg-[#2f3c7e] text-white text-center py-2 relative">
-    <p>
-      <span class="font-bold">عرض خاص!</span> خصم 70% على الاشتراك السنوي بكود 
-      <button (click)="copyPromoCode('SAVE70')" class="bg-red-500 text-white font-bold py-1 px-3 rounded-full text-sm mx-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#2f3c7e] focus:ring-white transition-transform transform active:scale-95">SAVE70</button>
-      @if(codeCopied()) {
-        <span class="absolute right-4 top-1/2 -translate-y-1/2 bg-teal-500 text-white text-xs font-bold px-2 py-1 rounded-md animate-fade-in">
-          تم النسخ!
-        </span>
-      }
-    </p>
+    <div class="max-w-7xl mx-auto px-4">
+      <p>
+        <span class="font-bold">عرض خاص!</span> خصم 70% على الاشتراك السنوي بكود 
+        <button (click)="copyPromoCode('SAVE70')" class="bg-red-500 text-white font-bold py-1 px-3 rounded-full text-sm mx-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#2f3c7e] focus:ring-white transition-transform transform active:scale-95">SAVE70</button>
+        @if(codeCopied()) {
+          <span class="absolute right-4 top-1/2 -translate-y-1/2 bg-teal-500 text-white text-xs font-bold px-2 py-1 rounded-md animate-fade-in">
+            تم النسخ!
+          </span>
+        }
+      </p>
+    </div>
   </div>
 </header>

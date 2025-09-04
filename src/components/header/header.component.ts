@@ -1,4 +1,3 @@
-
 import { ChangeDetectionStrategy, Component, inject, output, signal, effect, ElementRef } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { SearchService } from '../../services/search.service';
@@ -28,6 +27,7 @@ export class HeaderComponent {
   navigateToSignup = output<void>();
   navigateToAdminDashboard = output<void>();
   navigateToInstructorDashboard = output<void>();
+  navigateToJoin = output<void>();
 
   authService = inject(AuthService);
   searchService = inject(SearchService);
@@ -109,8 +109,8 @@ export class HeaderComponent {
     this.searchService.searchTerm.set(input.value);
   }
 
-  logout() {
-    this.authService.logout();
+  async logout() {
+    await this.authService.logout();
     this.navigateToHome.emit();
   }
 
