@@ -1,3 +1,4 @@
+
 import { ChangeDetectionStrategy, Component, computed, inject, output, signal } from '@angular/core';
 import { CourseCardComponent } from '../course-card/course-card.component';
 import { SearchService } from '../../services/search.service';
@@ -28,7 +29,7 @@ export class CoursesSectionComponent {
     const category = this.selectedCategory();
     const term = this.searchTerm().toLowerCase();
     
-    let courses = this.allCourses();
+    let courses = this.allCourses().filter(c => c.status === 'published');
 
     if (category !== 'كل الأقسام') {
       courses = courses.filter(course => course.category === category);

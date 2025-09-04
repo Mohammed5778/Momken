@@ -1,5 +1,6 @@
+
 import { ChangeDetectionStrategy, Component, inject, signal, computed } from '@angular/core';
-import { CourseService, Lesson } from '../../services/course.service';
+import { Course, CourseService, Lesson } from '../../services/course.service';
 import { AuthService } from '../../services/auth.service';
 
 type SubmissionStatus = 'idle' | 'submitting' | 'success' | 'error';
@@ -13,6 +14,10 @@ interface SelectedFiles {
 interface LessonFormData {
   id: number;
   file?: File;
+  title?: string;
+  duration?: string;
+  isFree?: boolean;
+  videoUrl?: string;
 }
 
 @Component({
@@ -28,6 +33,7 @@ export class InstructorDashboardComponent {
   status = signal<SubmissionStatus>('idle');
   errorMessage = signal('');
   successMessage = signal('');
+  editingCourse = signal<Course | null>(null);
 
   categories = signal<string[]>([
     'الرسم والتصميم', 'التسويق', 'تكنولوجيا المعلومات', 'الأعمال', 'التصوير وصناعة الأفلام', 'اللغات', 'الموارد البشرية'
@@ -74,8 +80,7 @@ export class InstructorDashboardComponent {
     }
   }
 
-  async submitCourse(event: Event) {
-    event.preventDefault();
+  async submitCourse(form: HTMLFormElement, status: 'draft' | 'published') {
     const user = this.currentUser();
     if (!user) {
         this.errorMessage.set('يجب تسجيل الدخول لإضافة دورة.');
@@ -86,54 +91,52 @@ export class InstructorDashboardComponent {
     this.errorMessage.set('');
     this.successMessage.set('');
     
-    const form = event.target as HTMLFormElement;
     const formData = new FormData(form);
 
     try {
       const title = formData.get('title') as string;
-      if (!title || !this.selectedFiles.courseImage) {
-        throw new Error('يرجى ملء عنوان الدورة وتحميل صورة الدورة.');
+      if (!title) throw new Error('يرجى ملء عنوان الدورة.');
+      if (!this.selectedFiles.courseImage && !this.editingCourse()) {
+        throw new Error('يرجى تحميل صورة للدورة.');
       }
       
-      const instructorImageFile = this.selectedFiles.instructorImage;
+      const courseImageFile = this.selectedFiles.courseImage;
+      const promoVideoFile = this.selectedFiles.videoUrl;
 
-      const [courseImageUrl, instructorImageUrl, promoVideoUrl] = await Promise.all([
-        this.courseService.uploadFile(this.selectedFiles.courseImage, 'course-images'),
-        instructorImageFile 
-          ? this.courseService.uploadFile(instructorImageFile, 'instructor-images')
-          : Promise.resolve(user.photoURL), // Use profile pic if not uploaded
-        this.selectedFiles.videoUrl 
-          ? this.courseService.uploadFile(this.selectedFiles.videoUrl, 'course-videos')
-          : Promise.resolve(undefined)
-      ]);
+      // Upload files that have been changed/added
+      const courseImageUrl = courseImageFile 
+        ? await this.courseService.uploadFile(courseImageFile, 'course-images')
+        : this.editingCourse()?.courseImage;
       
-      const lessonUploadPromises: Promise<string>[] = [];
-      const lessonsMetadata: Omit<Lesson, 'videoUrl'>[] = [];
-      
-      this.lessons().forEach((lessonForm) => {
+      const promoVideoUrl = promoVideoFile
+        ? await this.courseService.uploadFile(promoVideoFile, 'course-videos')
+        : this.editingCourse()?.videoUrl;
+
+      // Process lessons: upload new files, keep existing URLs
+      const lessonUploadPromises: Promise<Lesson>[] = this.lessons().map(async (lessonForm) => {
         const lessonTitle = formData.get(`lesson_title_${lessonForm.id}`) as string;
-        if (lessonTitle && lessonForm.file) {
-          lessonUploadPromises.push(this.courseService.uploadFile(lessonForm.file, 'lesson-videos'));
-          lessonsMetadata.push({
-            title: lessonTitle,
-            duration: formData.get(`lesson_duration_${lessonForm.id}`) as string,
-            isFree: !!formData.get(`lesson_isFree_${lessonForm.id}`),
-          });
+        if (!lessonTitle) return null; // Skip lessons without title
+
+        let videoUrl = lessonForm.videoUrl;
+        if (lessonForm.file) {
+           videoUrl = await this.courseService.uploadFile(lessonForm.file, 'lesson-videos');
         }
+
+        return {
+          title: lessonTitle,
+          duration: formData.get(`lesson_duration_${lessonForm.id}`) as string,
+          isFree: !!formData.get(`lesson_isFree_${lessonForm.id}`),
+          videoUrl: videoUrl || '',
+        };
       });
-      
-      const lessonVideoUrls = await Promise.all(lessonUploadPromises);
-      
-      const finalLessons: Lesson[] = lessonsMetadata.map((meta, index) => ({
-        ...meta,
-        videoUrl: lessonVideoUrls[index],
-      }));
+
+      const finalLessons = (await Promise.all(lessonUploadPromises)).filter((l): l is Lesson => l !== null);
 
       const whatYouWillLearnRaw = formData.get('whatYouWillLearn') as string;
-      const courseData = {
+      const courseData: Partial<Course> = {
         title,
         instructorName: user.displayName || 'محاضر',
-        instructorImage: instructorImageUrl || '',
+        instructorImage: user.photoURL || '',
         videoUrl: promoVideoUrl,
         category: formData.get('category') as string,
         duration: formData.get('duration') as string,
@@ -144,21 +147,60 @@ export class InstructorDashboardComponent {
         hasCertificate: !!(formData.get('hasCertificate')),
         lessons: finalLessons,
         instructorId: user.uid,
-        courseImage: courseImageUrl
+        courseImage: courseImageUrl,
+        status: status,
       };
       
-      await this.courseService.addCourse(courseData);
-
+      if (this.editingCourse()) {
+        await this.courseService.updateCourse(this.editingCourse()!.id, courseData);
+        this.successMessage.set(`تم تحديث دورة "${title}" بنجاح!`);
+      } else {
+        await this.courseService.addCourse(courseData as Omit<Course, 'id' | 'rating' | 'reviewsCount'>);
+        this.successMessage.set(`تمت إضافة دورة "${title}" بنجاح!`);
+      }
+      
       this.status.set('success');
-      this.successMessage.set(`تمت إضافة دورة "${title}" بنجاح!`);
-      form.reset();
-      this.selectedFiles = {};
-      this.lessons.set([{ id: Date.now() }]);
+      this.cancelEdit(form);
 
     } catch (error: any) {
       console.error('Failed to submit course', error);
       this.status.set('error');
       this.errorMessage.set(error.message || 'حدث خطأ غير متوقع أثناء إضافة الدورة.');
+    }
+  }
+
+  editCourse(course: Course, form: HTMLFormElement) {
+    this.editingCourse.set(course);
+    this.lessons.set(course.lessons.map(l => ({ ...l, id: Date.now() + Math.random() })) || [{ id: Date.now() }]);
+    this.selectedFiles = {};
+    form.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  cancelEdit(form: HTMLFormElement) {
+    this.editingCourse.set(null);
+    form.reset();
+    this.selectedFiles = {};
+    this.lessons.set([{ id: Date.now() }]);
+  }
+
+  async deleteCourse(course: Course) {
+    if (confirm(`هل أنت متأكد من حذف دورة "${course.title}"؟ لا يمكن التراجع عن هذا الإجراء.`)) {
+        try {
+            await this.courseService.deleteCourse(course.id);
+            this.successMessage.set('تم حذف الدورة بنجاح.');
+        } catch(e: any) {
+            this.errorMessage.set(e.message);
+        }
+    }
+  }
+
+  async toggleArchive(course: Course) {
+    const newStatus = course.status === 'archived' ? 'published' : 'archived';
+    try {
+        await this.courseService.updateCourse(course.id, { status: newStatus });
+        this.successMessage.set('تم تحديث حالة الدورة بنجاح.');
+    } catch(e: any) {
+        this.errorMessage.set(e.message);
     }
   }
 }

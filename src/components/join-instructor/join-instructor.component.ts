@@ -1,11 +1,11 @@
 
-import { ChangeDetectionStrategy, Component, signal, inject, ViewChild, ElementRef, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal, inject, ViewChild, ElementRef, computed, OnDestroy } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { supabaseClient } from '../../supabase.client';
 import { CourseService } from '../../services/course.service';
 
 
-type ApplicationPage = 'form' | 'interview' | 'submitting' | 'success' | 'error' | 'alreadyApplied';
+type ApplicationPage = 'form' | 'interview' | 'writtenInterview' | 'submitting' | 'success' | 'error' | 'alreadyApplied';
 type RecordingState = 'idle' | 'recording' | 'finished';
 
 interface InterviewQuestion {
@@ -25,7 +25,7 @@ interface VideoAnswer {
   templateUrl: './join-instructor.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class JoinInstructorComponent {
+export class JoinInstructorComponent implements OnDestroy {
   authService = inject(AuthService);
   courseService = inject(CourseService);
   currentUser = this.authService.currentUser;
@@ -35,6 +35,7 @@ export class JoinInstructorComponent {
   
   // Form state
   selectedCvFile = signal<File | null>(null);
+  private applicationFormData: FormData | null = null;
   
   // Interview state
   @ViewChild('videoPlayer') videoPlayer?: ElementRef<HTMLVideoElement>;
@@ -45,15 +46,19 @@ export class JoinInstructorComponent {
   ]);
   currentQuestionIndex = signal(0);
   videoAnswers = signal<VideoAnswer[]>([]);
+  writtenAnswers = signal<string[]>(['', '', '']);
   
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
   isCameraReady = signal(false);
+  cameraError = signal(false);
 
   currentQuestion = computed(() => this.interviewQuestions()[this.currentQuestionIndex()]);
   currentAnswer = computed(() => this.videoAnswers().find(a => a.questionId === this.currentQuestion()?.id));
   isLastQuestion = computed(() => this.currentQuestionIndex() === this.interviewQuestions().length - 1);
-  canSubmit = computed(() => this.videoAnswers().length === this.interviewQuestions().length && this.videoAnswers().every(a => a.file));
+  canSubmitVideo = computed(() => this.videoAnswers().length === this.interviewQuestions().length && this.videoAnswers().every(a => a.file));
+  canSubmitWritten = computed(() => this.writtenAnswers().every(a => a && a.trim().length > 5));
+
 
   constructor() {
     this.videoAnswers.set(this.interviewQuestions().map(q => ({
@@ -69,13 +74,14 @@ export class JoinInstructorComponent {
     }
   }
 
-  async startApplication(event: Event) {
-    event.preventDefault();
+  async startApplicationProcess(method: 'video' | 'written', form: HTMLFormElement) {
     if (!this.currentUser()) {
       this.errorMessage.set('يجب عليك تسجيل الدخول أولاً لتقديم طلب.');
       return;
     }
     
+    this.applicationFormData = new FormData(form);
+
     // Check if user has already applied
     const { data, error } = await supabaseClient
       .from('instructor_applications')
@@ -94,12 +100,17 @@ export class JoinInstructorComponent {
       return;
     }
     
-    // Proceed to interview
-    this.page.set('interview');
-    this.setupCamera();
+    if (method === 'video') {
+      this.page.set('interview');
+      this.setupCamera();
+    } else {
+      this.page.set('writtenInterview');
+    }
   }
 
   async setupCamera() {
+    this.cameraError.set(false);
+    this.errorMessage.set('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       if (this.videoPlayer?.nativeElement) {
@@ -121,12 +132,17 @@ export class JoinInstructorComponent {
     } catch (err: any) {
       console.error('Camera error:', err.name, err.message);
        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-           this.errorMessage.set('تم رفض الوصول إلى الكاميرا. يرجى السماح بالوصول في إعدادات متصفحك.');
+           this.errorMessage.set('تم رفض الوصول إلى الكاميرا. يرجى السماح بالوصول في إعدادات متصفحك ثم حاول مرة أخرى.');
        } else {
            this.errorMessage.set('لم نتمكن من الوصول إلى الكاميرا. يرجى التأكد من توصيلها ومنح الإذن والمحاولة مرة أخرى.');
        }
       this.isCameraReady.set(false);
+      this.cameraError.set(true);
     }
+  }
+  
+  retryCameraSetup() {
+    this.setupCamera();
   }
   
   startRecording() {
@@ -151,17 +167,65 @@ export class JoinInstructorComponent {
     }
   }
 
-  async submitFinalApplication() {
+  updateWrittenAnswer(index: number, event: Event) {
+    const newAnswer = (event.target as HTMLTextAreaElement).value;
+    this.writtenAnswers.update(answers => {
+        const newAnswers = [...answers];
+        newAnswers[index] = newAnswer;
+        return newAnswers;
+    });
+  }
+
+  async submitWrittenApplication() {
     this.page.set('submitting');
     this.errorMessage.set('');
 
-    const form = document.querySelector('form') as HTMLFormElement;
-    const formData = new FormData(form);
+    const formData = this.applicationFormData;
+    const cvFile = this.selectedCvFile();
+    
+    try {
+      if (!formData) throw new Error('بيانات النموذج مفقودة. يرجى إعادة المحاولة.');
+      if (!cvFile) throw new Error('يرجى رفع سيرتك الذاتية.');
+      if (!this.canSubmitWritten()) throw new Error('يرجى الإجابة على جميع الأسئلة.');
+
+      const cvUrl = await this.courseService.uploadFile(cvFile, 'cvs');
+      
+      const writtenAnswersForDb = this.interviewQuestions().map((q, i) => ({
+        question: q.text,
+        answer: this.writtenAnswers()[i]
+      }));
+
+      const { error } = await supabaseClient.from('instructor_applications').insert([{
+        user_id: this.currentUser()!.uid,
+        cv_url: cvUrl,
+        linkedin_url: formData.get('linkedin') as string,
+        bio: formData.get('bio') as string,
+        expertise_field: formData.get('expertise_field') as string,
+        video_answers: writtenAnswersForDb,
+        status: 'pending'
+      }]);
+
+      if (error) throw error;
+      this.page.set('success');
+
+    } catch (error: any) {
+      console.error('Submission error:', error);
+      this.errorMessage.set(error.message || 'حدث خطأ غير متوقع أثناء إرسال طلبك.');
+      this.page.set('error');
+    }
+  }
+
+  async submitFinalApplication() {
+    this.page.set('submitting');
+    this.errorMessage.set('');
+    
+    const formData = this.applicationFormData;
     const cvFile = this.selectedCvFile();
 
     try {
+      if (!formData) throw new Error('بيانات النموذج مفقودة. يرجى إعادة المحاولة.');
       if (!cvFile) throw new Error('يرجى رفع سيرتك الذاتية.');
-      if (!this.canSubmit()) throw new Error('يرجى الإجابة على جميع الأسئلة.');
+      if (!this.canSubmitVideo()) throw new Error('يرجى الإجابة على جميع الأسئلة.');
       
       const cvUrl = await this.courseService.uploadFile(cvFile, 'cvs');
       

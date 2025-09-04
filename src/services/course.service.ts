@@ -28,6 +28,7 @@ export interface Course {
   hasCertificate: boolean;
   lessons: Lesson[];
   instructorId: string;
+  status: 'draft' | 'published' | 'archived';
   instructor?: AppUser; // To hold joined profile data
 }
 
@@ -132,6 +133,7 @@ export class CourseService {
           hasCertificate: dbCourse.has_certificate ?? false,
           lessons: dbCourse.lessons ?? [],
           instructorId: dbCourse.instructor_id,
+          status: dbCourse.status ?? 'published',
           instructor: instructor,
         } as Course;
       });
@@ -156,12 +158,50 @@ export class CourseService {
       reviews_count: 0,
       lessons: courseData.lessons,
       instructor_id: courseData.instructorId,
+      status: courseData.status,
     };
 
     const { error } = await supabaseClient.from('courses').insert([newCourseForDb]);
     if (error) {
       console.error('Error adding course:', error.message);
       throw new Error(`Failed to add course: ${error.message}`);
+    }
+    await this.fetchCourses();
+  }
+
+  async updateCourse(courseId: string, updates: Partial<Omit<Course, 'id'>>): Promise<void> {
+    const dbUpdates: { [key: string]: any } = {};
+    if (updates.title) dbUpdates.title = updates.title;
+    if (updates.category) dbUpdates.category = updates.category;
+    if (updates.duration) dbUpdates.duration = updates.duration;
+    if (updates.level) dbUpdates.level = updates.level;
+    if (updates.description) dbUpdates.description = updates.description;
+    if (updates.whatYouWillLearn) dbUpdates.what_you_will_learn = updates.whatYouWillLearn;
+    if (updates.hasCertificate !== undefined) dbUpdates.has_certificate = updates.hasCertificate;
+    if (updates.status) dbUpdates.status = updates.status;
+    if (updates.courseImage) dbUpdates.course_image = updates.courseImage;
+    if (updates.videoUrl) dbUpdates.video_url = updates.videoUrl;
+    if (updates.lessons) dbUpdates.lessons = updates.lessons;
+    if (updates.lessonsCount) dbUpdates.lessons_count = updates.lessonsCount;
+
+    const { error } = await supabaseClient
+      .from('courses')
+      .update(dbUpdates)
+      .eq('id', courseId);
+    
+    if (error) {
+      throw new Error(`Failed to update course: ${error.message}`);
+    }
+    await this.fetchCourses();
+  }
+  
+  async deleteCourse(courseId: string): Promise<void> {
+    const { error } = await supabaseClient
+      .from('courses')
+      .delete()
+      .eq('id', courseId);
+    if (error) {
+      throw new Error(`Failed to delete course: ${error.message}`);
     }
     await this.fetchCourses();
   }

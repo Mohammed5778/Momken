@@ -1,3 +1,5 @@
+
+
 import { ChangeDetectionStrategy, Component, inject, signal, computed } from '@angular/core';
 import { CourseService, Lesson } from '../../services/course.service';
 import { AuthService, AppUser } from '../../services/auth.service';
@@ -16,6 +18,10 @@ interface SelectedFiles {
 interface LessonFormData {
   id: number;
   file?: File;
+  title?: string;
+  duration?: string;
+  isFree?: boolean;
+  videoUrl?: string;
 }
 
 interface InstructorApplication {
@@ -26,7 +32,7 @@ interface InstructorApplication {
   linkedin_url: string;
   bio: string;
   expertise_field: string;
-  video_answers: { question: string; url: string }[];
+  video_answers: { question: string; url?: string, answer?: string }[];
   user: {
     id: string;
     full_name: string;
@@ -54,6 +60,8 @@ export class AdminDashboardComponent {
   levels = signal<string[]>(['مبتدئ', 'متوسط', 'متقدم', 'كل المستويات']);
   selectedFiles: SelectedFiles = {};
   lessons = signal<LessonFormData[]>([]);
+  editingCourse = signal<Course | null>(null);
+  allCourses = this.courseService.allCourses;
   
   // Applications state
   applications = signal<InstructorApplication[]>([]);
@@ -88,12 +96,57 @@ export class AdminDashboardComponent {
   }
 
   async fetchApplications() {
-    const { data, error } = await supabaseClient
-      .from('instructor_applications')
-      .select(`*, user:profiles(id, full_name, avatar_url)`)
-      .order('created_at', { ascending: false });
-    if (data) {
-      this.applications.set(data as any);
+    this.errorMessage.set('');
+    try {
+      const { data: applicationsData, error: applicationsError } = await supabaseClient
+        .from('instructor_applications')
+        .select('id, user_id, created_at, status, cv_url, linkedin_url, bio, expertise_field, video_answers')
+        .order('created_at', { ascending: false });
+
+      if (applicationsError) {
+        throw new Error(`Supabase error fetching applications: ${applicationsError.message}`);
+      }
+
+      if (!applicationsData || applicationsData.length === 0) {
+        this.applications.set([]);
+        return; 
+      }
+
+      const userIds = [...new Set(applicationsData.map(app => app.user_id).filter(Boolean))];
+
+      if (userIds.length === 0) {
+        const appsWithoutUsers = applicationsData.map(app => ({
+          ...app,
+          user: { id: '', full_name: 'User ID Missing', avatar_url: '' }
+        }));
+        this.applications.set(appsWithoutUsers as any);
+        return;
+      }
+
+      const { data: profilesData, error: profilesError } = await supabaseClient
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', userIds);
+
+      if (profilesError) {
+        throw new Error(`Supabase error fetching profiles: ${profilesError.message}`);
+      }
+      
+      const profilesMap = new Map(profilesData.map(profile => [profile.id, profile]));
+
+      const combinedData = applicationsData.map(app => {
+        const userProfile = profilesMap.get(app.user_id);
+        return {
+          ...app,
+          user: userProfile || { id: app.user_id, full_name: 'Profile Not Found', avatar_url: '' }
+        };
+      });
+
+      this.applications.set(combinedData as any);
+    } catch (e: any) {
+      console.error(e);
+      this.errorMessage.set(`An error occurred while fetching applications: ${e.message}. Check Supabase RLS policies.`);
+      this.applications.set([]);
     }
   }
 
@@ -108,7 +161,6 @@ export class AdminDashboardComponent {
   }
 
   async handleApplication(applicationId: string, userId: string, newStatus: 'approved' | 'rejected') {
-    // 1. Update application status
     const { error: appError } = await supabaseClient
       .from('instructor_applications')
       .update({ status: newStatus })
@@ -119,7 +171,6 @@ export class AdminDashboardComponent {
       return;
     }
 
-    // 2. If approved, update user role
     if (newStatus === 'approved') {
       const { error: roleError } = await supabaseClient
         .from('profiles')
@@ -132,7 +183,6 @@ export class AdminDashboardComponent {
       }
     }
 
-    // 3. Refresh data
     this.successMessage.set(`Application has been ${newStatus}.`);
     this.selectedApplication.set(null);
     this.fetchApplications();
@@ -186,7 +236,6 @@ export class AdminDashboardComponent {
     }
   }
 
-  // Course Management Methods
   addLesson() { this.lessons.update(l => [...l, { id: Date.now() }]); }
   removeLesson(id: number) { this.lessons.update(l => l.filter(les => les.id !== id)); }
   handleFileChange(event: Event, fileType: keyof SelectedFiles) {
@@ -197,6 +246,43 @@ export class AdminDashboardComponent {
     const input = event.target as HTMLInputElement;
     if (input.files?.[0]) {
       this.lessons.update(l => l.map(les => les.id === id ? { ...les, file: input.files![0] } : les));
+    }
+  }
+
+  editCourse(course: Course, form: HTMLFormElement) {
+    this.editingCourse.set(course);
+    this.status.set('idle');
+    this.errorMessage.set('');
+    this.successMessage.set('');
+    this.lessons.set(course.lessons?.map(l => ({ ...l, id: Date.now() + Math.random() })) || [{ id: Date.now() }]);
+    this.selectedFiles = {};
+    form.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  cancelEdit(form: HTMLFormElement) {
+    this.editingCourse.set(null);
+    form.reset();
+    this.selectedFiles = {};
+    this.lessons.set([{ id: Date.now() }]);
+  }
+
+  async deleteCourse(course: Course) {
+    if (confirm(`هل أنت متأكد من حذف دورة "${course.title}"؟ لا يمكن التراجع عن هذا الإجراء.`)) {
+        try {
+            await this.courseService.deleteCourse(course.id);
+            this.successMessage.set('تم حذف الدورة بنجاح.');
+        } catch(e: any) {
+            this.errorMessage.set(e.message);
+        }
+    }
+  }
+
+  async updateCourseStatus(course: Course, status: 'published' | 'archived' | 'draft') {
+    try {
+        await this.courseService.updateCourse(course.id, { status });
+        this.successMessage.set('تم تحديث حالة الدورة بنجاح.');
+    } catch(e: any) {
+        this.errorMessage.set(e.message);
     }
   }
 
@@ -211,39 +297,55 @@ export class AdminDashboardComponent {
     
     const form = event.target as HTMLFormElement;
     const formData = new FormData(form);
+    const editing = this.editingCourse();
 
     try {
       const title = formData.get('title') as string;
       const instructorName = formData.get('instructorName') as string;
-      const instructorImageFile = this.selectedFiles.instructorImage;
 
-      if (!title || !instructorName || !this.selectedFiles.courseImage) {
-        throw new Error('يرجى ملء جميع الحقول المطلوبة وتحميل الصور الأساسية.');
+      if (!title || (!editing && !instructorName)) {
+        throw new Error('يرجى ملء جميع الحقول المطلوبة.');
       }
+      if (!editing && !this.selectedFiles.courseImage) {
+        throw new Error('يرجى تحميل صورة للدورة.');
+      }
+      
+      const courseImageFile = this.selectedFiles.courseImage;
+      const instructorImageFile = this.selectedFiles.instructorImage;
+      const promoVideoFile = this.selectedFiles.videoUrl;
 
       const [courseImageUrl, instructorImageUrl, promoVideoUrl] = await Promise.all([
-        this.courseService.uploadFile(this.selectedFiles.courseImage, 'course-images'),
-        instructorImageFile ? this.courseService.uploadFile(instructorImageFile, 'instructor-images') : Promise.resolve(user.photoURL || ''),
-        this.selectedFiles.videoUrl ? this.courseService.uploadFile(this.selectedFiles.videoUrl, 'course-videos') : Promise.resolve(undefined)
+        courseImageFile ? this.courseService.uploadFile(courseImageFile, 'course-images') : Promise.resolve(editing?.courseImage),
+        instructorImageFile ? this.courseService.uploadFile(instructorImageFile, 'instructor-images') : Promise.resolve(editing?.instructorImage || user.photoURL || ''),
+        promoVideoFile ? this.courseService.uploadFile(promoVideoFile, 'course-videos') : Promise.resolve(editing?.videoUrl)
       ]);
       
-      const lessonUploadPromises: Promise<string>[] = [];
-      const lessonsMetadata: Omit<Lesson, 'videoUrl'>[] = [];
+      const lessonUploadPromises: Promise<Lesson | null>[] = this.lessons().map(async (lessonForm) => {
+        const lessonTitle = (form.elements.namedItem(`lesson_title_${lessonForm.id}`) as HTMLInputElement)?.value;
+        if (!lessonTitle) return null;
 
-      this.lessons().forEach((lessonForm) => {
-        const lessonTitle = formData.get(`lesson_title_${lessonForm.id}`) as string;
-        if (lessonTitle && lessonForm.file) {
-          lessonUploadPromises.push(this.courseService.uploadFile(lessonForm.file, 'lesson-videos'));
-          lessonsMetadata.push({ title: lessonTitle, duration: formData.get(`lesson_duration_${lessonForm.id}`) as string, isFree: !!formData.get(`lesson_isFree_${lessonForm.id}`) });
+        let videoUrl = lessonForm.videoUrl;
+        if (lessonForm.file) {
+           videoUrl = await this.courseService.uploadFile(lessonForm.file, 'lesson-videos');
         }
+
+        return {
+          title: lessonTitle,
+          duration: (form.elements.namedItem(`lesson_duration_${lessonForm.id}`) as HTMLInputElement)?.value,
+          isFree: (form.elements.namedItem(`lesson_isFree_${lessonForm.id}`) as HTMLInputElement)?.checked,
+          videoUrl: videoUrl || '',
+        };
       });
       
-      const lessonVideoUrls = await Promise.all(lessonUploadPromises);
-      const finalLessons: Lesson[] = lessonsMetadata.map((meta, index) => ({ ...meta, videoUrl: lessonVideoUrls[index] }));
+      const finalLessons = (await Promise.all(lessonUploadPromises)).filter((l): l is Lesson => l !== null);
       const whatYouWillLearnRaw = formData.get('whatYouWillLearn') as string;
       
-      const courseData: Omit<Course, 'id' | 'rating' | 'reviewsCount'> = {
-        title, instructorName, courseImage: courseImageUrl, instructorImage: instructorImageUrl, videoUrl: promoVideoUrl,
+      const courseData: Partial<Course> = {
+        title,
+        instructorName: editing ? editing.instructorName : instructorName,
+        courseImage: courseImageUrl,
+        instructorImage: instructorImageUrl,
+        videoUrl: promoVideoUrl,
         category: formData.get('category') as string,
         duration: formData.get('duration') as string,
         level: formData.get('level') as string,
@@ -252,19 +354,25 @@ export class AdminDashboardComponent {
         whatYouWillLearn: whatYouWillLearnRaw.split('\n').filter(line => line.trim() !== ''),
         hasCertificate: !!(formData.get('hasCertificate')),
         lessons: finalLessons,
-        instructorId: user.uid
+        instructorId: editing ? editing.instructorId : user.uid,
+        status: editing ? editing.status : 'published'
       };
       
-      await this.courseService.addCourse(courseData);
+      if (editing) {
+        await this.courseService.updateCourse(editing.id, courseData);
+        this.successMessage.set(`تم تحديث دورة "${title}" بنجاح!`);
+      } else {
+        await this.courseService.addCourse(courseData as Omit<Course, 'id' | 'rating' | 'reviewsCount'>);
+        this.successMessage.set(`تمت إضافة دورة "${title}" بنجاح!`);
+      }
+      
       this.status.set('success');
-      this.successMessage.set(`تمت إضافة دورة "${title}" بنجاح!`);
-      form.reset();
-      this.selectedFiles = {};
-      this.lessons.set([{ id: Date.now() }]);
+      this.cancelEdit(form);
+
     } catch (error: any) {
       console.error('Failed to submit course', error);
       this.status.set('error');
-      this.errorMessage.set(error.message || 'حدث خطأ غير متوقع أثناء إضافة الدورة.');
+      this.errorMessage.set(error.message || 'حدث خطأ غير متوقع أثناء حفظ الدورة.');
     }
   }
 }

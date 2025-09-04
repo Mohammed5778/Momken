@@ -1,3 +1,4 @@
+
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { AppUser } from '../../services/auth.service';
 import { Course, CourseService } from '../../services/course.service';
@@ -17,7 +18,9 @@ export class InstructorProfileComponent {
 
   instructorCourses = computed(() => {
     const instructorId = this.instructor().uid;
-    return this.courseService.allCourses().filter(course => course.instructorId === instructorId);
+    return this.courseService.allCourses().filter(course => 
+      course.instructorId === instructorId && course.status === 'published'
+    );
   });
 
   onCourseClicked(course: Course) {
