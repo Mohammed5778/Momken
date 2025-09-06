@@ -6,6 +6,6 @@
 // your users to interact with your Supabase database according to the Row Level Security (RLS)
 // policies you have defined.
 export const environment = {
-  supabaseUrl: 'https://prmpqvmktjkcdqvmsnyl.supabase.co',
-  supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBybXBxdm1rdGprY2Rxdm1zbnlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5ODg1NDgsImV4cCI6MjA3MjU2NDU0OH0.CIbEf66QlO5MsHLiduWcNGTvXbnQCRmPquGfaWgsi_U'
+  supabase_Url: 'https://prmpqvmktjkcdqvmsnyl.supabase.co',
+  supabase_Anon_Key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBybXBxdm1rdGprY2Rxdm1zbnlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5ODg1NDgsImV4cCI6MjA3MjU2NDU0OH0.CIbEf66QlO5MsHLiduWcNGTvXbnQCRmPquGfaWgsi_U'
 };
